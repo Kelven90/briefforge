@@ -1,0 +1,50 @@
+# Node / pnpm
+node_modules
+.turbo
+.pnpm-store
+
+# Next.js
+.next
+out
+.vercel
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+logs
+*.log
+
+# Env (never commit secrets; only .env.example files are tracked)
+.env
+.env.*
+!.env.example
+!apps/web/.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env.local
+**/.env.*.local
+
+# Python
+__pycache__/
+*.py[cod]
+.venv
+venv
+
+# Supabase
+supabase/.temp
+
+# Local storage (uploads and seeded files; recreated by seed script)
+storage/
+
+# Secrets / keys (backup)
+*.pem
+*.key
+secrets.json
+
+# OS
+.DS_Store
+Thumbs.db

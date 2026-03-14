@@ -1,0 +1,19 @@
+{
+  "name": "@briefforge/evals",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "scripts": {
+    "evals": "tsx src/runQaEval.ts",
+    "evals:brief": "tsx src/runBriefEval.ts"
+  },
+  "dependencies": {
+    "@briefforge/core": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.21.0"
+  }
+}
+

@@ -1,0 +1,2 @@
+"""BriefForge indexing worker package."""
+

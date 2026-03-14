@@ -1,0 +1,15 @@
+[
+  {
+    "id": "acme-constraints-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "What constraints and success criteria are explicitly stated for the Acme Creator Launch project?",
+    "expectedCitationsMin": 2
+  },
+  {
+    "id": "acme-deliverables-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "What concrete deliverables are in scope for the Acme brief generation tool?",
+    "expectedCitationsMin": 2
+  }
+]
+

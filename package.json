@@ -1,0 +1,28 @@
+{
+  "name": "briefforge",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@9.0.0",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "test": "turbo test",
+    "format": "prettier --check .",
+    "format:fix": "prettier --write .",
+    "typecheck": "turbo typecheck",
+    "check": "pnpm lint && pnpm typecheck && pnpm build",
+    "evals": "pnpm --filter @briefforge/evals run evals && pnpm --filter @briefforge/evals run evals:brief",
+    "seed": "tsx infra/scripts/seed.ts"
+  },
+  "devDependencies": {
+    "@types/pg": "^8.18.0",
+    "dotenv": "^17.3.1",
+    "pg": "^8.20.0",
+    "prettier": "^3.3.0",
+    "tsx": "^4.21.0",
+    "turbo": "^2.0.0",
+    "typescript": "^5.6.0",
+    "wait-on": "^8.0.1"
+  }
+}

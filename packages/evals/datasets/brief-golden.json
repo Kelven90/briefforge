@@ -1,0 +1,9 @@
+[
+  {
+    "id": "acme-brief-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "Generate a project brief for Acme Creator Launch.",
+    "minSectionsWithCitations": 3
+  }
+]
+

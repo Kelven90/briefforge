@@ -1,0 +1,4 @@
+project_id = "briefforge-local"
+[db]
+shadow_port = 5433
+
