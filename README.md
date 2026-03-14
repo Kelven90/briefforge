@@ -2,7 +2,7 @@
 
 BriefForge is an AI-native workspace that turns messy client materials into grounded, reviewable project briefs.
 
-It is designed as a **portfolio-grade system** for agencies, solutions engineers, and creator-tool teams: uploads are indexed asynchronously, questions are answered with citations, briefs are structured and schema-validated, and the system tracks jobs, latency, and token usage.
+It is designed as a system for agencies, solutions engineers, and creator-tool teams: uploads are indexed asynchronously, questions are answered with citations, briefs are structured and schema-validated, and the system tracks jobs, latency, and token usage.
 
 ### Why this project exists
 
@@ -71,10 +71,10 @@ For more architectural detail, see `docs/architecture.md`.
 
 #### Prerequisites
 
-- Node.js 20+
-- pnpm 9+
-- Docker (for Postgres + Redis)
-- Python 3.11+ (if running the worker locally outside Docker)
+- **Node.js** 20+ and **pnpm** 9+
+- **Docker** (for Postgres and Redis)
+- **PostgreSQL client** (`psql`) on your PATH — for running migrations and seed SQL. Install via [PostgreSQL](https://www.postgresql.org/download/) or `choco install postgresql` on Windows; ensure the `bin` directory is in PATH.
+- **Python** 3.11+ (only if you run the indexing worker locally)
 
 #### 1. Clone and install
 
@@ -106,30 +106,39 @@ Optional but recommended:
 - `OPENAI_EMBEDDING_MODEL`, `OPENAI_CHAT_MODEL`, `OPENAI_STRICT_MODEL`
 - `AUTH_SECRET` (for NextAuth)
 
-#### 3. Start infrastructure (Postgres + Redis + services)
+#### 3. Start infrastructure and seed DB
+
+From the repo root:
 
 ```bash
 docker compose up -d db redis
 ```
 
-Run initial migration and seed via Supabase CLI or psql:
+Then run migrations and seed (requires `psql` on your PATH):
 
 ```bash
-# Apply schema
 psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
-
-# Seed demo user + workspace
 psql "$DATABASE_URL" -f supabase/seed.sql
+pnpm seed
 ```
 
-Then, in separate terminals:
+#### 4. Run the app and worker
+
+In **two separate terminals** from the repo root:
 
 ```bash
-# Web app
+# Terminal 1 — Web app
 pnpm dev --filter @briefforge/web
 
-# Indexing worker (Python)
+# Terminal 2 — Indexing worker (Python)
 cd services/indexing-worker
+python -m venv .venv
+
+# Activate: 
+macOS/Linux → source .venv/bin/activate   
+Windows (Git Bash) → source .venv/Scripts/activate
+
+pip install -e .
 python -m src.main
 ```
 
@@ -137,7 +146,7 @@ The web app will be available at `http://localhost:3000`.
 
 **Note:** If you run the app on a different port or host, set `NEXTAUTH_URL` (e.g. `http://localhost:3001`) so sign-in and callbacks work. If port 3000 is already in use, stop the other process or set the port when starting (e.g. `PORT=3001 pnpm dev --filter @briefforge/web`).
 
-#### 4. Run CI locally (before pushing)
+#### 5. Run CI locally (before pushing)
 
 You can run the same steps as GitHub Actions locally so you don’t have to push to see if CI passes.
 
@@ -166,15 +175,12 @@ Only needed if you want to run the evals (QA + brief) that CI runs. You need Pos
 2. **Set env**  
    Ensure `.env` (or `apps/web/.env.local`) has `DATABASE_URL` and `REDIS_URL` (e.g. `postgresql://postgres:postgres@localhost:5432/briefforge` and `redis://localhost:6379`).
 
-3. **Migrate and seed** (from repo root):
+3. **Migrate and seed** (from repo root; same as step 3 above):
    ```bash
-   pnpm exec tsx infra/scripts/migrate.ts
+   psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
    psql "$DATABASE_URL" -f supabase/seed.sql
    pnpm seed
    ```
-   On Windows PowerShell, for the seed SQL use:  
-   `Get-Content -Raw supabase/seed.sql | psql $env:DATABASE_URL`  
-   if `psql` is in your path, or run the SQL via another tool. Then run `pnpm seed`.
 
 4. **Start the app**  
    In one terminal:
@@ -201,7 +207,7 @@ act push
 
 or `act pull_request`. This uses the same `.github/workflows/ci.yml` and service containers.
 
-#### 5. Demo flow
+#### 6. Demo flow
 
 The intended recruiter/demo flow:
 
@@ -270,7 +276,7 @@ See the `briefforge/` root for the full monorepo layout. Key pieces:
 
 ### Status
 
-This repository is intentionally scoped as a **weekend MVP + 2-week V1** build:
+This repository is intentionally scoped as:
 
 - MVP:
   - Auth, workspaces, source upload, async indexing (parse/chunk/embed), pgvector retrieval.

@@ -17,6 +17,22 @@ const CreateSourceInput = z.object({
 
 export type CreateSourceInput = z.infer<typeof CreateSourceInput>;
 
+function detectTrustLevel(fileName: string, content?: string | null): "trusted" | "flagged" {
+  const text = `${fileName}\n${content ?? ""}`.toLowerCase();
+  const suspiciousPhrases = [
+    "ignore previous instructions",
+    "you are chatgpt",
+    "act as",
+    "system prompt",
+    "jailbreak",
+    "prompt injection",
+    "do anything now",
+    "override your instructions"
+  ];
+  const looksSuspicious = suspiciousPhrases.some((phrase) => text.includes(phrase));
+  return looksSuspicious ? "flagged" : "trusted";
+}
+
 export async function createSourceAndEnqueueParseJob(
   ownerId: string,
   input: unknown
@@ -47,11 +63,13 @@ export async function createSourceAndEnqueueParseJob(
     await fs.writeFile(absolutePath, parsed.content, "utf8");
   }
 
+  const trustLevel = detectTrustLevel(parsed.fileName, parsed.content ?? null);
+
   const { rows } = await query<Source & { job_id: string }>(
     `
       with inserted_source as (
-        insert into public.sources (workspace_id, file_name, file_type, storage_path)
-        values ($1, $2, $3, $4)
+        insert into public.sources (workspace_id, file_name, file_type, storage_path, trust_level)
+        values ($1, $2, $3, $4, $5)
         returning id, workspace_id as "workspaceId", file_name as "fileName",
                   file_type as "fileType", storage_path as "storagePath",
                   status, trust_level as "trustLevel", created_at as "createdAt"
@@ -65,7 +83,7 @@ export async function createSourceAndEnqueueParseJob(
       from inserted_source s
       cross join inserted_job j
     `,
-    [parsed.workspaceId, parsed.fileName, parsed.fileType, storagePath]
+    [parsed.workspaceId, parsed.fileName, parsed.fileType, storagePath, trustLevel]
   );
 
   const row = rows[0];

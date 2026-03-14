@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: briefforge-indexing-worker
+Version: 0.1.0
+Summary: Background worker for BriefForge indexing pipeline (parse, chunk, embed, reindex).
+Requires-Python: >=3.11
+Requires-Dist: psycopg[binary,pool]==3.3.3
+Requires-Dist: redis==5.0.4
+Requires-Dist: rq==1.16.2
+Requires-Dist: pydantic==2.12.5
+Requires-Dist: python-dotenv==1.0.1
+Requires-Dist: openai==1.30.1
+Requires-Dist: tenacity==8.3.0

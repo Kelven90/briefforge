@@ -1,0 +1,2 @@
+[console_scripts]
+indexing-worker = src.main:main

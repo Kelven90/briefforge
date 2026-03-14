@@ -7,7 +7,11 @@ from ..clients.db import execute, fetch_one
 logger = logging.getLogger(__name__)
 
 
-STORAGE_ROOT = os.getenv("STORAGE_ROOT", "./storage")
+# Default to the monorepo root /storage directory, not services/.
+_DEFAULT_STORAGE_ROOT = os.path.abspath(
+  os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "storage")
+)
+STORAGE_ROOT = os.getenv("STORAGE_ROOT", _DEFAULT_STORAGE_ROOT)
 
 
 async def run_parse_job(job_id: str) -> None:

@@ -92,6 +92,8 @@ ${contextText}
   let tokenInput = 0;
   let tokenOutput = 0;
   let estimatedCost = 0;
+  let groundednessStatus: "unknown" | "grounded" | "partially_grounded" | "unsupported" = "unknown";
+  let unsupportedClaimsCount = 0;
 
   if (isLlmDisabled()) {
     // Cheap, obviously stubbed answer using real retrieved chunks.
@@ -136,6 +138,29 @@ ${contextText}
     });
   }
 
+  // Very rough unsupported-claim heuristic: count answer tokens not present in any chunk text.
+  if (chunks.length > 0 && parsedAnswer.answerText) {
+    const chunkTextCombined = chunks.map((c) => c.chunkText).join(" ").toLowerCase();
+    const chunkTokens = new Set(chunkTextCombined.match(/[a-z0-9]+/gi) ?? []);
+    const answerTokens = new Set(
+      parsedAnswer.answerText
+        .toLowerCase()
+        .match(/[a-z0-9]+/gi) ?? []
+    );
+    let unsupported = 0;
+    for (const token of answerTokens) {
+      if (!chunkTokens.has(token)) unsupported++;
+    }
+    unsupportedClaimsCount = unsupported;
+    if (unsupported === 0 && parsedAnswer.citations.length > 0) {
+      groundednessStatus = "grounded";
+    } else if (parsedAnswer.citations.length === 0 && unsupported > 0) {
+      groundednessStatus = "unsupported";
+    } else if (unsupported > 0) {
+      groundednessStatus = "partially_grounded";
+    }
+  }
+
   const { rows } = await query<{ id: string }>(
     `
       insert into public.answer_runs (
@@ -150,7 +175,7 @@ ${contextText}
         token_output,
         estimated_cost
       )
-      values ($1, $2, $3, $4::jsonb, 'unknown', 0, $5, $6, $7, $8)
+      values ($1, $2, $3, $4::jsonb, $5, $6, $7, $8, $9, $10)
       returning id
     `,
     [
@@ -158,6 +183,8 @@ ${contextText}
       question,
       parsedAnswer.answerText,
       JSON.stringify(parsedAnswer.citations),
+      groundednessStatus,
+      unsupportedClaimsCount,
       latencyMs,
       tokenInput,
       tokenOutput,
@@ -177,7 +204,9 @@ ${contextText}
       latencyMs,
       tokenInput,
       tokenOutput,
-      estimatedCost
+      estimatedCost,
+      groundednessStatus,
+      unsupportedClaimsCount
     }),
     {
       status: 200,

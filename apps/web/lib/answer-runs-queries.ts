@@ -10,6 +10,8 @@ export type AnswerRunRow = {
   tokenOutput: number;
   // numeric(12,6) comes back as string from pg by default
   estimatedCost: string;
+  groundednessStatus: string;
+  unsupportedClaimsCount: number;
   createdAt: string;
 };
 
@@ -28,6 +30,8 @@ export async function listRecentAnswerRunsForWorkspace(
         token_input as "tokenInput",
         token_output as "tokenOutput",
         estimated_cost as "estimatedCost",
+        groundedness_status as "groundednessStatus",
+        unsupported_claims_count as "unsupportedClaimsCount",
         created_at as "createdAt"
       from public.answer_runs
       where workspace_id = $1

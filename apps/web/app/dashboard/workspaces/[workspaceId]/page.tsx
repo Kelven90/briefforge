@@ -234,6 +234,7 @@ function WorkspaceUsageCard({
           <thead className="bg-slate-950">
             <tr>
               <th className="px-3 py-2 font-medium text-slate-300">Question</th>
+              <th className="px-3 py-2 font-medium text-slate-300">Groundedness</th>
               <th className="px-3 py-2 font-medium text-slate-300">Latency</th>
               <th className="px-3 py-2 font-medium text-slate-300">Tokens</th>
               <th className="px-3 py-2 font-medium text-slate-300">Est. cost</th>
@@ -247,6 +248,12 @@ function WorkspaceUsageCard({
               >
                 <td className="max-w-xs px-3 py-2 text-slate-100">
                   <span className="line-clamp-2">{r.question}</span>
+                </td>
+                <td className="px-3 py-2">
+                  <UsageGroundednessBadge
+                    status={r.groundednessStatus}
+                    unsupported={r.unsupportedClaimsCount}
+                  />
                 </td>
                 <td className="px-3 py-2 text-slate-300">{r.latencyMs.toFixed(0)} ms</td>
                 <td className="px-3 py-2 text-slate-300">
@@ -264,6 +271,38 @@ function WorkspaceUsageCard({
       </div>
     </section>
   );
+}
+
+function UsageGroundednessBadge({
+  status,
+  unsupported
+}: {
+  status: string;
+  unsupported: number;
+}) {
+  const base = "rounded-full px-2 py-0.5 text-[10px] font-medium";
+  if (status === "grounded") {
+    return (
+      <span className={`${base} bg-emerald-500/15 text-emerald-300`}>
+        Grounded
+      </span>
+    );
+  }
+  if (status === "unsupported") {
+    return (
+      <span className={`${base} bg-red-500/15 text-red-300`}>
+        Unsupported{unsupported ? ` ~${unsupported}` : ""}
+      </span>
+    );
+  }
+  if (status === "partially_grounded") {
+    return (
+      <span className={`${base} bg-amber-500/15 text-amber-300`}>
+        Partial{unsupported ? ` ~${unsupported}` : ""}
+      </span>
+    );
+  }
+  return <span className={`${base} bg-slate-500/15 text-slate-300`}>—</span>;
 }
 
 function StatusBadge({ status }: { status: string }) {
