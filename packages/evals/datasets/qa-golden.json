@@ -10,6 +10,18 @@
     "workspaceId": "00000000-0000-0000-0000-000000000010",
     "question": "What concrete deliverables are in scope for the Acme brief generation tool?",
     "expectedCitationsMin": 2
+  },
+  {
+    "id": "acme-timeline-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "What launch timeline and time constraints are mentioned for the Acme Creator Launch project?",
+    "expectedCitationsMin": 1
+  },
+  {
+    "id": "acme-risks-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "What risks or assumptions are called out for the Acme brief generation work?",
+    "expectedCitationsMin": 1
   }
 ]
 

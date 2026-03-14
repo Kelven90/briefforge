@@ -4,6 +4,7 @@ import { getWorkspaceForUser } from "../../../../lib/workspaces";
 import { listSourcesForWorkspace } from "../../../../lib/sources-queries";
 import { listRecentJobsForWorkspace } from "../../../../lib/jobs-queries";
 import { listRecentAnswerRunsForWorkspace } from "../../../../lib/answer-runs-queries";
+import { listRecentEvaluationsForWorkspace } from "../../../../lib/evals-queries";
 import { QaPanel } from "../../../../components/qa/QaPanel";
 import { BriefPanel } from "../../../../components/brief/BriefPanel";
 import { SourceUploadPanel } from "../../../../components/source/SourceUploadPanel";
@@ -25,10 +26,11 @@ export default async function WorkspaceDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [sources, jobs, answerRuns] = await Promise.all([
+  const [sources, jobs, answerRuns, evaluations] = await Promise.all([
     listSourcesForWorkspace(workspace.id),
     listRecentJobsForWorkspace(workspace.id, 8),
-    listRecentAnswerRunsForWorkspace(workspace.id, 8)
+    listRecentAnswerRunsForWorkspace(workspace.id, 8),
+    listRecentEvaluationsForWorkspace(workspace.id, 4)
   ]);
 
   return (
@@ -95,6 +97,7 @@ export default async function WorkspaceDetailPage({ params }: PageProps) {
           <QaPanel workspaceId={workspace.id} />
           <BriefPanel workspaceId={workspace.id} />
           <WorkspaceUsageCard answerRuns={answerRuns} />
+          <WorkspaceEvalsCard evaluations={evaluations} />
         </div>
       </div>
     </main>
@@ -269,6 +272,71 @@ function WorkspaceUsageCard({
           </tbody>
         </table>
       </div>
+    </section>
+  );
+}
+
+function WorkspaceEvalsCard({
+  evaluations
+}: {
+  evaluations: Awaited<ReturnType<typeof listRecentEvaluationsForWorkspace>>;
+}) {
+  if (evaluations.length === 0) {
+    return (
+      <section className="rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+        <h2 className="mb-1 text-sm font-semibold text-slate-100">Evals</h2>
+        <p className="text-xs text-slate-400">
+          No eval runs recorded yet. From the repo root, run <code className="font-mono">pnpm
+          evals</code> to exercise QA and brief endpoints.
+        </p>
+      </section>
+    );
+  }
+
+  const latestQa = evaluations.find((e) => e.evalType === "qa");
+  const latestBrief = evaluations.find((e) => e.evalType === "brief");
+
+  const qaSummary = latestQa?.scoreJson?.summary as
+    | { passed: number; total: number; avgLatencyMs: number }
+    | undefined;
+  const briefSummary = latestBrief?.scoreJson?.summary as
+    | { passed: number; total: number; avgLatencyMs: number }
+    | undefined;
+
+  return (
+    <section className="space-y-2 rounded-lg border border-slate-800 bg-slate-950/60 p-4">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-100">Evals</h2>
+        <span className="text-[10px] text-slate-400">
+          Last run {evaluations[0]?.createdAt ? new Date(evaluations[0].createdAt).toLocaleString() : "—"}
+        </span>
+      </div>
+      <div className="space-y-1 text-xs text-slate-200">
+        <div className="flex items-center justify-between">
+          <span className="text-slate-300">QA</span>
+          <span className="text-slate-200">
+            {qaSummary
+              ? `${qaSummary.passed}/${qaSummary.total} passed · avg ${qaSummary.avgLatencyMs.toFixed(
+                  0
+                )} ms`
+              : "No runs"}
+          </span>
+        </div>
+        <div className="flex items-center justify-between">
+          <span className="text-slate-300">Briefs</span>
+          <span className="text-slate-200">
+            {briefSummary
+              ? `${briefSummary.passed}/${briefSummary.total} passed · avg ${briefSummary.avgLatencyMs.toFixed(
+                  0
+                )} ms`
+              : "No runs"}
+          </span>
+        </div>
+      </div>
+      <p className="text-[10px] text-slate-500">
+        Evals call the same endpoints as the UI using seeded Acme data to catch regressions in
+        grounding and brief structure.
+      </p>
     </section>
   );
 }

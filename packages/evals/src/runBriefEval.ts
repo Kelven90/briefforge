@@ -23,6 +23,49 @@ type BriefEvalResult = {
   latencyMs: number;
 };
 
+async function recordEvalSummary(
+  results: BriefEvalResult[]
+): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const url = new URL("/api/evals/record", baseUrl);
+  const token = process.env.BRIEFFORGE_EVAL_TOKEN || "local-eval";
+
+  const passed = results.filter((r) => r.ok).length;
+  const total = results.length;
+  const avgLatency =
+    results.reduce((acc, r) => acc + r.latencyMs, 0) / Math.max(total, 1);
+
+  const body = {
+    workspaceId: "00000000-0000-0000-0000-000000000010",
+    evalType: "brief" as const,
+    summary: {
+      passed,
+      total,
+      avgLatencyMs: avgLatency
+    },
+    cases: results
+  };
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-eval-token": token
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      // eslint-disable-next-line no-console
+      console.error("Failed to record brief eval summary:", text);
+    }
+  } catch (err: any) {
+    // eslint-disable-next-line no-console
+    console.error("Error calling /api/evals/record for brief evals:", err?.message ?? err);
+  }
+}
+
 async function callBriefEndpoint(input: { workspaceId: string; question?: string }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const url = new URL("/api/briefs/generate", baseUrl);
@@ -111,6 +154,8 @@ async function runBriefEval(): Promise<void> {
   }
   console.log("----------------");
   console.log(`Summary: ${passed}/${total} passed, avg latency ${avgLatency.toFixed(0)} ms`);
+
+  await recordEvalSummary(results);
 }
 
 runBriefEval().catch((err) => {

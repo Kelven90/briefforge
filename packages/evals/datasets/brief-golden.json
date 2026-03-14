@@ -4,6 +4,12 @@
     "workspaceId": "00000000-0000-0000-0000-000000000010",
     "question": "Generate a project brief for Acme Creator Launch.",
     "minSectionsWithCitations": 3
+  },
+  {
+    "id": "acme-brief-constraints-1",
+    "workspaceId": "00000000-0000-0000-0000-000000000010",
+    "question": "Generate a brief for Acme Creator Launch that emphasizes constraints, risks, and open questions.",
+    "minSectionsWithCitations": 3
   }
 ]
 

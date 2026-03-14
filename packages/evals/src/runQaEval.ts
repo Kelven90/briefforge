@@ -23,6 +23,49 @@ type QaEvalResult = {
   latencyMs: number;
 };
 
+async function recordEvalSummary(
+  results: QaEvalResult[]
+): Promise<void> {
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const url = new URL("/api/evals/record", baseUrl);
+  const token = process.env.BRIEFFORGE_EVAL_TOKEN || "local-eval";
+
+  const passed = results.filter((r) => r.ok).length;
+  const total = results.length;
+  const avgLatency =
+    results.reduce((acc, r) => acc + r.latencyMs, 0) / Math.max(total, 1);
+
+  const body = {
+    workspaceId: "00000000-0000-0000-0000-000000000010",
+    evalType: "qa" as const,
+    summary: {
+      passed,
+      total,
+      avgLatencyMs: avgLatency
+    },
+    cases: results
+  };
+
+  try {
+    const res = await fetch(url.toString(), {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "x-internal-eval-token": token
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      // eslint-disable-next-line no-console
+      console.error("Failed to record QA eval summary:", text);
+    }
+  } catch (err: any) {
+    // eslint-disable-next-line no-console
+    console.error("Error calling /api/evals/record for QA evals:", err?.message ?? err);
+  }
+}
+
 async function callQaEndpoint(input: { workspaceId: string; question: string }) {
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const url = new URL("/api/qa/ask", baseUrl);
@@ -101,6 +144,8 @@ async function runQaEval(): Promise<void> {
   }
   console.log("----------------");
   console.log(`Summary: ${passed}/${total} passed, avg latency ${avgLatency.toFixed(0)} ms`);
+
+  await recordEvalSummary(results);
 }
 
 runQaEval().catch((err) => {
