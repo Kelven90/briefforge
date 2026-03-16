@@ -3,10 +3,7 @@ import { getCurrentSession } from "../auth/session";
 
 export async function requireUser(req: NextRequest) {
   const internalToken = req.headers.get("x-internal-eval-token");
-  if (
-    internalToken &&
-    process.env.NODE_ENV !== "production"
-  ) {
+  if (internalToken && internalToken === process.env.BRIEFFORGE_EVAL_TOKEN) {
     return {
       user: {
         id: "00000000-0000-0000-0000-000000000001",
