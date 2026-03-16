@@ -114,4 +114,5 @@ jobs:
           pnpm --filter @briefforge/web start &
           echo "Waiting for http://localhost:3000 ..."
           pnpm exec wait-on -t 60000 http://localhost:3000
+          pnpm test:smoke
           pnpm evals
