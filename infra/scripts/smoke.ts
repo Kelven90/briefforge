@@ -2,6 +2,8 @@ import "dotenv/config";
 
 const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 const evalToken = process.env.BRIEFFORGE_EVAL_TOKEN ?? "local-eval";
+// Seeded demo workspace used by evals and local demo flows.
+const demoWorkspaceId = "00000000-0000-0000-0000-000000000010";
 
 async function assertOk(response: Response, description: string) {
   if (!response.ok) {
@@ -11,20 +13,7 @@ async function assertOk(response: Response, description: string) {
 }
 
 async function main() {
-  // 1. List workspaces
-  const workspacesRes = await fetch(new URL("/api/workspaces", baseUrl).toString(), {
-    headers: {
-      "x-internal-eval-token": evalToken
-    }
-  });
-  await assertOk(workspacesRes, "List workspaces");
-  const workspacesData = (await workspacesRes.json()) as { workspaces: { id: string }[] };
-  if (!workspacesData.workspaces?.length) {
-    throw new Error("Smoke test: expected at least one workspace");
-  }
-  const workspaceId = workspacesData.workspaces[0].id;
-
-  // 2. QA endpoint
+  // 1. QA endpoint
   const qaRes = await fetch(new URL("/api/qa/ask", baseUrl).toString(), {
     method: "POST",
     headers: {
@@ -32,7 +21,7 @@ async function main() {
       "x-internal-eval-token": evalToken
     },
     body: JSON.stringify({
-      workspaceId,
+      workspaceId: demoWorkspaceId,
       question: "What constraints does Acme have around launch timelines?"
     })
   });
@@ -45,7 +34,7 @@ async function main() {
     throw new Error("Smoke test: QA endpoint returned empty answerText");
   }
 
-  // 3. Brief generation endpoint
+  // 2. Brief generation endpoint
   const briefRes = await fetch(new URL("/api/briefs/generate", baseUrl).toString(), {
     method: "POST",
     headers: {
@@ -53,7 +42,7 @@ async function main() {
       "x-internal-eval-token": evalToken
     },
     body: JSON.stringify({
-      workspaceId,
+      workspaceId: demoWorkspaceId,
       question: "Generate a high-level brief for this workspace"
     })
   });

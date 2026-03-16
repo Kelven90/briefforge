@@ -74,13 +74,13 @@ If you run on a different host/port, set `NEXTAUTH_URL` accordingly so callbacks
 ```bash
 pnpm install --frozen-lockfile
 pnpm check
-```
 
-### 6. Run evals
+### 6. Optional: smoke test + evals
 
-With Postgres/Redis running and the app up:
+With the app running (or using `pnpm --filter @briefforge/web start` in another terminal):
 
 ```bash
+pnpm test:smoke
 pnpm evals
 ```
 

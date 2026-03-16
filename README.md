@@ -10,30 +10,7 @@ It is designed as a system for agencies, solutions engineers, and creator-tool t
 - **Goal**: Provide a workspace where you can drop messy sources, ask grounded questions, and generate structured briefs that are backed by evidence.
 - **Design stance**: Outputs are *untrusted* until validated. Everything important is structured (jobs, briefs, evals, usage), not freeform blobs.
 
-### High-level architecture
-
-At a glance:
-
-- **Next.js App Router (TypeScript, Tailwind)**  
-  - Auth (Auth.js / NextAuth)  
-  - Dashboard UI (workspaces, sources, QA, briefs, jobs)  
-  - REST API/BFF for QA, briefs, evals, and usage
-- **Postgres + pgvector (via Supabase layout)**  
-  - `workspaces`, `sources`, `chunks`, `briefs`, `answer_runs`, `jobs`, `evaluations`
-  - `chunks.embedding` stores pgvector embeddings for retrieval
-- **Redis + BullMQ**  
-  - `indexing-jobs` queue for parse → chunk → embed → reindex flows
-- **Python indexing worker (Pydantic, psycopg, OpenAI)**  
-  - Consumes jobs, parses files, chunks content, and writes embeddings
-- **OpenAI**  
-  - Embeddings for retrieval  
-  - Chat models for grounded QA and structured brief generation
-- **Shared packages**  
-  - `@briefforge/core`: Zod schemas and shared types  
-  - `@briefforge/prompts`: versioned prompts with strict output contracts  
-  - `@briefforge/observability`: logger utilities (Pino-based)
-
-For more architectural detail, see `docs/architecture.md`.
+For the full system diagram and component breakdown, see `docs/architecture.md`.
 
 ### Core workflow
 
@@ -123,27 +100,6 @@ BriefForge is **designed to run locally first** using Docker‑based Postgres an
   `git filter-branch --force --index-filter "git rm --cached --ignore-unmatch .env apps/web/.env.local" --prune-empty HEAD`
   Then **rotate any exposed keys** (new AUTH_SECRET, new OPENAI_API_KEY, etc.).
 
-### Testing & quality
-
-Planned (and partially scaffolded):
-
-- **Unit tests** via Vitest for core libraries (`@briefforge/core`, prompts, retrieval).
-- **E2E/smoke tests** via Playwright for the main demo flow (sign in → open workspace → ask question → generate brief).
-- **Eval harness** (`packages/evals`) to run seeded QA and brief evaluations:
-  - Citation coverage for QA answers (each golden question expects a minimum number of citations).
-  - Schema compliance and citation presence for briefs (sections must validate against `BriefContent` and carry citations).
-  - Regression-friendly aggregate metrics (how many cases passed, and average latency).
-
-#### Quality & evals
-
-- `pnpm evals` runs both:
-  - **QA evals**: calls the live `/api/qa/ask` endpoint against a small golden dataset for the Acme workspace and checks citation coverage + latency.
-  - **Brief evals**: calls `/api/briefs/generate` and validates that the returned JSON matches `BriefContent` and that multiple sections include citations.
-- Evals call the same endpoints the UI uses, so they exercise:
-  - Retrieval (pgvector queries over `chunks.embedding`).
-  - Prompting and schema validation.
-  - Answer/brief recording into `answer_runs` and `briefs`.
-
 ### Key design decisions
 
 - **pgvector over external vector DB**  
@@ -163,31 +119,4 @@ Full decision notes:
 - `docs/decisions/001-pgvector-over-external-vector-db.md`
 - `docs/decisions/002-async-indexing.md`
 - `docs/decisions/003-structured-briefs-and-citations.md`
-
-### Project layout
-
-See the `briefforge/` root for the full monorepo layout. Key pieces:
-
-- `apps/web` – Next.js app (App Router, dashboard, APIs)
-- `services/indexing-worker` – Python background worker
-- `packages/core` – shared Zod schemas and types
-- `packages/prompts` – model prompts and prompt versions
-- `packages/evals` – eval harness (planned)
-- `packages/observability` – logging utilities
-- `supabase` – migrations and seed data
-- `docs` – architecture, API contracts, security, demo script, [future updates](docs/future-updates.md) (optional CI and Jobs improvements)
-
-### Status
-
-This repository is intentionally scoped as:
-
-- MVP:
-  - Auth, workspaces, source upload, async indexing (parse/chunk/embed), pgvector retrieval.
-  - Grounded QA with citations and structured brief generation.
-  - Basic dashboard to inspect sources, jobs, answers, and briefs.
-- V1 (planned):
-  - Trust levels, prompt-injection flagging, unsupported-claim checks.
-  - Eval harness and regression tests.
-  - Usage and cost tracking surfaces in the UI.
-  - CI, smoke tests, and richer docs.
 
