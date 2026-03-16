@@ -66,12 +66,12 @@ python -m src.main
 
 ### Docs
 
-- `docs/local-development.md` (full setup + CI-equivalent commands)
-- `docs/demo-walkthrough.md` (short live demo walkthrough)
-- `docs/architecture.md`
-- `docs/api-contracts.md`
-- `docs/security.md`
-- `docs/future-updates.md`
+- [docs/local-development.md](docs/local-development.md) — full setup + CI-equivalent commands
+- [docs/demo-walkthrough.md](docs/demo-walkthrough.md) — short live demo walkthrough
+- [docs/architecture.md](docs/architecture.md)
+- [docs/api-contracts.md](docs/api-contracts.md)
+- [docs/security.md](docs/security.md)
+- [docs/future-updates.md](docs/future-updates.md)
 
 ### Deployment considerations
 
@@ -116,7 +116,7 @@ BriefForge is **designed to run locally first** using Docker‑based Postgres an
 
 Full decision notes:
 
-- `docs/decisions/001-pgvector-over-external-vector-db.md`
-- `docs/decisions/002-async-indexing.md`
-- `docs/decisions/003-structured-briefs-and-citations.md`
+- [docs/decisions/001-pgvector-over-external-vector-db.md](docs/decisions/001-pgvector-over-external-vector-db.md)
+- [docs/decisions/002-async-indexing.md](docs/decisions/002-async-indexing.md)
+- [docs/decisions/003-structured-briefs-and-citations.md](docs/decisions/003-structured-briefs-and-citations.md)
 
