@@ -207,16 +207,32 @@ act push
 
 or `act pull_request`. This uses the same `.github/workflows/ci.yml` and service containers.
 
-#### 6. Demo flow
+#### 6. Quick Demo walkthrough
 
-The intended recruiter/demo flow:
-
-1. Navigate to `http://localhost:3000`.
-2. Click **“Sign in as demo”** and enter access code `demo`.
-3. On the dashboard, open the **“Acme Creator Launch”** workspace.
-4. Review seeded sources and their indexing status.
-5. Ask a grounded question (e.g. “What constraints does Acme have around launch timelines?”) and inspect the answer + citations.
-6. Click **“Generate brief”** to see structured sections (goals, deliverables, constraints, risks, open questions) with citation counts.
+1. **Home → demo sign‑in**
+   - Go to `http://localhost:3000`.
+   - Click **“Start demo workspace”** and complete the sign‑in flow as the demo user.
+2. **Open the seeded workspace**
+   - On the dashboard, open the **Acme launch demo workspace**.
+   - Briefly point out the description so people know this is seeded with kickoff, brand, FAQ, and a prompt‑injection file.
+3. **Inspect sources & trust**
+   - Expand **Sources**.
+   - Hover a couple of rows (kickoff, brand guide, FAQ, prompt‑injection).
+   - Click the trust badges (`Trusted` / `Flagged`) to show the short explanation of why each label exists.
+4. **Show the indexing pipeline**
+   - Expand **Jobs (indexing pipeline)**.
+   - Use the small `i` icon to explain that uploads fan out into **parse → chunk → embed** jobs with retries.
+5. **Ask one grounded question**
+   - In **Q&A (grounded with evidence)**, ask a prepared question like:
+     - “What constraints does Acme have around the launch timeline and scope?”
+   - When the answer returns, point out latency, groundedness status, and click a couple of **Evidence** chips to show the retrieved chunks and trust levels.
+6. **Generate and review a structured brief**
+   - In **Structured brief**, either generate a new brief or reuse the latest one.
+   - Call out the stable sections (goals, deliverables, constraints, timeline risks, open questions) and the citation counts per section.
+   - Optionally hit **“Needs changes”** and regenerate with a short feedback note to show iterative improvement.
+7. **Usage, cost, and evals**
+   - Expand **Usage & latency** to show recent Q&A runs, average latency, tokens in/out, and estimated cost.
+   - Expand **Evals (QA & brief)** to show the latest QA/brief eval summaries (passed/total and average latency) and mention that `pnpm evals` calls the same endpoints as the UI.
 
 ### Before pushing to GitHub
 
@@ -246,20 +262,40 @@ Planned (and partially scaffolded):
   - Prompting and schema validation.
   - Answer/brief recording into `answer_runs` and `briefs`.
 
+### Security & guardrails
+
+This is a demo, but it is still designed with basic safety and isolation in mind:
+
+- **Auth and tenant scoping**  
+  - Auth is handled with NextAuth; all workspace‑scoped APIs check that the current user owns the workspace ID on every request.
+
+- **Validation and schemas everywhere**  
+  - Request bodies are parsed with Zod (`CreateSourceInput`, QA/brief request bodies).
+  - LLM responses for briefs must validate against `BriefContentSchema` before they are stored; invalid JSON fails the request instead of silently corrupting state.
+
+- **Prompt‑injection awareness**  
+  - New sources run through a simple `detectTrustLevel` heuristic; suspicious content (e.g. “ignore previous instructions”, “system prompt”, “jailbreak”) is marked as **flagged** and surfaced in the UI so you can reason about which files might be adversarial.
+
+- **Isolation of secrets and demo data**  
+  - All secrets live in env vars; only `.env.example` templates are committed.
+  - The Acme workspace and its files are fully synthetic demo data, not real customer material.
+
+- **Evidence‑first UX**  
+  - Both QA answers and briefs are accompanied by citations and groundedness/unsupported‑claim signals so the user can review before trusting or acting on model output.
 
 ### Key design decisions
 
 - **pgvector over external vector DB**  
-  Local-first, simple, and good enough for single-node deployments. Documented in `docs/decisions/001-pgvector-over-pinecone.md`.
+  Keeping embeddings inside Postgres simplifies local development, migrations, and seeding. For a single‑node demo, the operational cost of an external vector service isn’t worth the extra moving parts.
 
 - **Async indexing over synchronous uploads**  
-  Uploads remain snappy, and the `jobs` table gives you robust retries and observability. See `docs/decisions/002-async-indexing.md`.
+  Upload requests merely create a `sources` row and enqueue a `parse` job; a worker does parse → chunk → embed. This keeps the upload UX responsive, makes retries explicit, and gives you a single `jobs` table to debug indexing issues.
 
 - **Structured briefs over freeform text**  
-  Briefs are stored as JSON (`BriefContent`) to make validation, rendering, diffing, and evals straightforward. See `docs/decisions/003-citation-first-ux.md`.
+  Briefs are stored as JSON (`BriefContent` with sections and citations) instead of a single markdown blob. That makes validation, rendering, evaluation, and future diffing or export much easier.
 
-- **TypeScript-first, narrow Python worker**  
-  Next.js + TypeScript own the product surface; Python is used narrowly for indexing and embeddings where async file/IO work shines.
+- **Citations and groundedness as first‑class concepts**  
+  Every QA/brief run stores citations plus groundedness metadata and exposes them in the UI. The system is designed around “evidence + status” rather than “LLM said so,” which is closer to how you would design a real assistive tool.
 
 ### Project layout
 
