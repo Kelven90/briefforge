@@ -1,8 +1,8 @@
 import { z } from "zod";
 
 export const BriefSectionCitationSchema = z.object({
-  chunkId: z.string().uuid(),
-  sourceId: z.string().uuid()
+  chunkId: z.string(),
+  sourceId: z.string()
 });
 
 export const BriefSectionSchema = z.object({

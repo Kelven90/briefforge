@@ -38,6 +38,17 @@ When changing CI or the repo, avoid breaking the following:
 
 ---
 
+## Usage (recent answers) – click to view record
+
+**Planned (priority before Jobs observability and Briefs review):** When the user clicks a question in the Usage (recent answers) table, show a detail view (drawer or modal) with:
+
+- The full **answer record**: answer text, citations, groundedness status, unsupported-claims count, latency, token in/out, estimated cost.
+- If a **brief** was generated in the same workspace around that flow (or linked to that answer/run), show the brief record (version, sections, citation counts) so the user can review answer and brief together.
+
+This improves traceability and review without changing the existing QA or brief APIs.
+
+---
+
 ## Jobs (indexing pipeline and UI)
 
 **Current setup:** Jobs table in the workspace UI (type, status, source, started, completed, attempts); retry only for failed jobs with a non-null source. Worker polls Postgres only; retry updates the job to `queued` and also enqueues to Redis (redundant for current worker but harmless and future-proof).

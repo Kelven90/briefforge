@@ -12,7 +12,8 @@ import { query } from "../../../../lib/db/client";
 const GenerateBriefBodySchema = z.object({
   workspaceId: z.string().uuid(),
   question: z.string().optional(),
-  topK: z.number().int().positive().max(50).optional()
+  topK: z.number().int().positive().max(50).optional(),
+  feedback: z.string().max(2000).optional()
 });
 
 export async function POST(req: NextRequest) {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest) {
     });
   }
 
-  const { workspaceId, question, topK } = parsed.data;
+  const { workspaceId, question, topK, feedback } = parsed.data;
 
   // Ensure workspace belongs to user and get name
   const workspaceRes = await query<{ id: string; name: string }>(
@@ -92,7 +93,7 @@ ${generateBriefUserPrompt({
   question
 })}
 
-Context chunks:
+${feedback ? `Reviewer feedback on the previous draft (if any): ${feedback}\n` : ""}Context chunks:
 ${evidenceText}
 `.trim();
 

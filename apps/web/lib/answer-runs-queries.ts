@@ -5,6 +5,7 @@ export type AnswerRunRow = {
   workspaceId: string;
   question: string;
   answerText: string;
+  citationsJson: { chunkId: string; sourceId: string }[];
   latencyMs: number;
   tokenInput: number;
   tokenOutput: number;
@@ -26,6 +27,7 @@ export async function listRecentAnswerRunsForWorkspace(
         workspace_id as "workspaceId",
         question,
         answer_text as "answerText",
+        citations_json as "citationsJson",
         latency_ms as "latencyMs",
         token_input as "tokenInput",
         token_output as "tokenOutput",
