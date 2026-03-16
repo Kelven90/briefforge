@@ -12,6 +12,25 @@ It is designed as a system for agencies, solutions engineers, and creator-tool t
 
 For the full system diagram and component breakdown, see `docs/architecture.md`.
 
+### Screenshots & demo
+
+- **Home page**
+
+  ![BriefForge home](docs/screenshots/homepage.png)
+
+- **Workspace dashboard**
+
+  ![Workspace dashboard](docs/screenshots/demo-dashboard.png)
+
+- **Sources and indexing overview**
+
+  ![Workspace sources](docs/screenshots/workspace-screenshot-1.png)
+  ![Workspace jobs and QA](docs/screenshots/workspace-screenshot-2.png)
+
+- **Short demo video**
+
+  [Watch the BriefForge demo on YouTube](https://youtu.be/0e779ARaY8E)
+
 ### Core workflow
 
 1. **Upload sources**  
