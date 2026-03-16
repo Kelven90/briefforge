@@ -67,172 +67,54 @@ For more architectural detail, see `docs/architecture.md`.
      - Grounded QA with evidence chips.  
      - Structured brief with per-section citation counts.
 
-### Local development
-
-#### Prerequisites
-
-- **Node.js** 20+ and **pnpm** 9+
-- **Docker** (for Postgres and Redis)
-- **PostgreSQL client** (`psql`) on your PATH — for running migrations and seed SQL. Install via [PostgreSQL](https://www.postgresql.org/download/) or `choco install postgresql` on Windows; ensure the `bin` directory is in PATH.
-- **Python** 3.11+ (only if you run the indexing worker locally)
-
-#### 1. Clone and install
+### Quickstart (local)
 
 ```bash
-git clone git@github.com:Kelven90/briefforge.git
-cd briefforge
-
 pnpm install
-```
-
-#### 2. Environment variables
-
-Copy the example env file and fill in the required values:
-
-```bash
-cp .env.example .env
-cp apps/web/.env.example apps/web/.env.local
-```
-
-Required for local dev:
-
-- `DATABASE_URL` – local Postgres instance (docker-compose uses `briefforge` DB by default).
-- `REDIS_URL` – Redis connection string.
-- `OPENAI_API_KEY` – for embeddings and chat completion.
-  - Set `BRIEFFORGE_DISABLE_LLM=1` during UI/dev work to avoid calling OpenAI; the app will return stubbed, obviously marked responses using real chunks but no model calls.
-
-Optional but recommended:
-
-- `OPENAI_EMBEDDING_MODEL`, `OPENAI_CHAT_MODEL`, `OPENAI_STRICT_MODEL`
-- `AUTH_SECRET` (for NextAuth)
-
-#### 3. Start infrastructure and seed DB
-
-From the repo root:
-
-```bash
 docker compose up -d db redis
-```
-
-Then run migrations and seed (requires `psql` on your PATH):
-
-```bash
 psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
 psql "$DATABASE_URL" -f supabase/seed.sql
 pnpm seed
+pnpm dev --filter @briefforge/web
 ```
 
-#### 4. Run the app and worker
-
-In **two separate terminals** from the repo root:
+Worker (separate terminal):
 
 ```bash
-# Terminal 1 — Web app
-pnpm dev --filter @briefforge/web
-
-# Terminal 2 — Indexing worker (Python)
 cd services/indexing-worker
 python -m venv .venv
-
-# Activate: 
-macOS/Linux → source .venv/bin/activate   
-Windows (Git Bash) → source .venv/Scripts/activate
-
 pip install -e .
 python -m src.main
 ```
 
-The web app will be available at `http://localhost:3000`.
+### Docs
 
-**Note:** If you run the app on a different port or host, set `NEXTAUTH_URL` (e.g. `http://localhost:3001`) so sign-in and callbacks work. If port 3000 is already in use, stop the other process or set the port when starting (e.g. `PORT=3001 pnpm dev --filter @briefforge/web`).
+- `docs/local-development.md` (full setup + CI-equivalent commands)
+- `docs/demo-walkthrough.md` (short live demo walkthrough)
+- `docs/architecture.md`
+- `docs/api-contracts.md`
+- `docs/security.md`
+- `docs/future-updates.md`
 
-#### 5. Run CI locally (before pushing)
+### Deployment considerations
 
-You can run the same steps as GitHub Actions locally so you don’t have to push to see if CI passes.
+BriefForge is **designed to run locally first** using Docker‑based Postgres and Redis, but the same pieces map cleanly to a simple cloud deployment:
 
-**Quick check before every push:** from repo root run `pnpm install --frozen-lockfile` then `pnpm check`. If both succeed, the first CI job (lint, typecheck, build) will pass.
+- **Services**
+  - Web app: build with `pnpm build && pnpm start` and run as a single Node.js service (e.g. Railway, Render, Fly.io, or a small VM behind Nginx).
+  - Postgres: managed Postgres (e.g. Supabase, Railway, Render) with pgvector enabled.
+  - Redis: managed Redis (e.g. Upstash, Railway, Render) for the `indexing-jobs` BullMQ queue.
+  - Indexing worker: one long‑running Python process (container) pointing at the same Postgres/Redis as the web app.
 
-**Step 1 – Same as CI job 1 (lint, typecheck, build)**
+- **Environment**
+  - Same env vars as local dev: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `AUTH_SECRET`, `NEXTAUTH_URL`, plus optional model overrides.
+  - Secrets stay in the platform’s secret manager; only `.env.example` is checked into git.
 
-From the repo root:
-
-```bash
-pnpm install --frozen-lockfile
-pnpm check
-```
-
-If both commands succeed, the first CI job would pass. Run this whenever you change code and before you push.
-
-**Step 2 – Optional: same as CI evals job**
-
-Only needed if you want to run the evals (QA + brief) that CI runs. You need Postgres and Redis and the app running.
-
-1. **Start Postgres and Redis** (if not already running):
-   ```bash
-   docker compose up -d db redis
-   ```
-
-2. **Set env**  
-   Ensure `.env` (or `apps/web/.env.local`) has `DATABASE_URL` and `REDIS_URL` (e.g. `postgresql://postgres:postgres@localhost:5432/briefforge` and `redis://localhost:6379`).
-
-3. **Migrate and seed** (from repo root; same as step 3 above):
-   ```bash
-   psql "$DATABASE_URL" -f supabase/migrations/0001_init.sql
-   psql "$DATABASE_URL" -f supabase/seed.sql
-   pnpm seed
-   ```
-
-4. **Start the app**  
-   In one terminal:
-   ```bash
-   pnpm --filter @briefforge/web start
-   ```
-   Wait until you see the app listening (e.g. on port 3000).
-
-5. **Run evals**  
-   In a second terminal (from repo root):
-   ```bash
-   pnpm evals
-   ```
-
-If step 1 passes and (optionally) step 2 passes, your push should pass CI.
-
-**Alternative: run the whole workflow with act**
-
-If you have [act](https://github.com/nektos/act) and Docker, you can run the full workflow locally:
-
-```bash
-act push
-```
-
-or `act pull_request`. This uses the same `.github/workflows/ci.yml` and service containers.
-
-#### 6. Quick Demo walkthrough
-
-1. **Home → demo sign‑in**
-   - Go to `http://localhost:3000`.
-   - Click **“Start demo workspace”** and complete the sign‑in flow as the demo user.
-2. **Open the seeded workspace**
-   - On the dashboard, open the **Acme launch demo workspace**.
-   - Briefly point out the description so people know this is seeded with kickoff, brand, FAQ, and a prompt‑injection file.
-3. **Inspect sources & trust**
-   - Expand **Sources**.
-   - Hover a couple of rows (kickoff, brand guide, FAQ, prompt‑injection).
-   - Click the trust badges (`Trusted` / `Flagged`) to show the short explanation of why each label exists.
-4. **Show the indexing pipeline**
-   - Expand **Jobs (indexing pipeline)**.
-   - Use the small `i` icon to explain that uploads fan out into **parse → chunk → embed** jobs with retries.
-5. **Ask one grounded question**
-   - In **Q&A (grounded with evidence)**, ask a prepared question like:
-     - “What constraints does Acme have around the launch timeline and scope?”
-   - When the answer returns, point out latency, groundedness status, and click a couple of **Evidence** chips to show the retrieved chunks and trust levels.
-6. **Generate and review a structured brief**
-   - In **Structured brief**, either generate a new brief or reuse the latest one.
-   - Call out the stable sections (goals, deliverables, constraints, timeline risks, open questions) and the citation counts per section.
-   - Optionally hit **“Needs changes”** and regenerate with a short feedback note to show iterative improvement.
-7. **Usage, cost, and evals**
-   - Expand **Usage & latency** to show recent Q&A runs, average latency, tokens in/out, and estimated cost.
-   - Expand **Evals (QA & brief)** to show the latest QA/brief eval summaries (passed/total and average latency) and mention that `pnpm evals` calls the same endpoints as the UI.
+- **Scaling story (demo‑scale)**
+  - Web app: scale to a small number of instances; stateless except for sessions backed by the NextAuth adapter.
+  - Worker: usually a **single** indexing worker is enough; horizontal scaling is possible by running multiple workers consuming the same queue.
+  - Database: single Postgres instance with pgvector extension; reads/writes are modest for a demo workspace.
+  - Redis: standard single‑region instance; queue depth and failure rates are visible via the `jobs` table and logs.
 
 ### Before pushing to GitHub
 
@@ -262,27 +144,6 @@ Planned (and partially scaffolded):
   - Prompting and schema validation.
   - Answer/brief recording into `answer_runs` and `briefs`.
 
-### Security & guardrails
-
-This is a demo, but it is still designed with basic safety and isolation in mind:
-
-- **Auth and tenant scoping**  
-  - Auth is handled with NextAuth; all workspace‑scoped APIs check that the current user owns the workspace ID on every request.
-
-- **Validation and schemas everywhere**  
-  - Request bodies are parsed with Zod (`CreateSourceInput`, QA/brief request bodies).
-  - LLM responses for briefs must validate against `BriefContentSchema` before they are stored; invalid JSON fails the request instead of silently corrupting state.
-
-- **Prompt‑injection awareness**  
-  - New sources run through a simple `detectTrustLevel` heuristic; suspicious content (e.g. “ignore previous instructions”, “system prompt”, “jailbreak”) is marked as **flagged** and surfaced in the UI so you can reason about which files might be adversarial.
-
-- **Isolation of secrets and demo data**  
-  - All secrets live in env vars; only `.env.example` templates are committed.
-  - The Acme workspace and its files are fully synthetic demo data, not real customer material.
-
-- **Evidence‑first UX**  
-  - Both QA answers and briefs are accompanied by citations and groundedness/unsupported‑claim signals so the user can review before trusting or acting on model output.
-
 ### Key design decisions
 
 - **pgvector over external vector DB**  
@@ -296,6 +157,12 @@ This is a demo, but it is still designed with basic safety and isolation in mind
 
 - **Citations and groundedness as first‑class concepts**  
   Every QA/brief run stores citations plus groundedness metadata and exposes them in the UI. The system is designed around “evidence + status” rather than “LLM said so,” which is closer to how you would design a real assistive tool.
+
+Full decision notes:
+
+- `docs/decisions/001-pgvector-over-external-vector-db.md`
+- `docs/decisions/002-async-indexing.md`
+- `docs/decisions/003-structured-briefs-and-citations.md`
 
 ### Project layout
 
