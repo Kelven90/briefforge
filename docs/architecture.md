@@ -2,6 +2,14 @@
 
 This document captures the system architecture for BriefForge. It is intentionally pragmatic and focused on a solo‑engineer friendly implementation that still looks and feels production‑minded.
 
+### Why the repo includes a .NET worker
+
+The indexing pipeline is designed around a **stable storage contract** (Postgres tables + job states) rather than a language‑specific queue consumer. That makes it possible to implement the worker in different runtimes while keeping behavior consistent. This repo includes a **.NET 8 indexing worker** as an **optional alternative** to the Python worker to demonstrate:
+
+- A realistic C# service (HostedService loop, Npgsql data access, retries, structured logging).
+- A pragmatic boundary: the Next.js app remains unchanged while the worker can be swapped.
+- A production-ish posture: one worker should run at a time; Postgres remains the source of truth.
+
 ### High-level flow
 
 1. Users authenticate via Auth.js / NextAuth in the Next.js app.
@@ -10,7 +18,7 @@ This document captures the system architecture for BriefForge. It is intentional
    - Writes a `sources` row.
    - Inserts a `jobs` row (`job_type = 'parse'`, `status = 'queued'`).
    - Enqueues a corresponding job in the `indexing-jobs` Redis queue.
-4. The Python indexing worker consumes jobs, parses files, chunks content, and writes embeddings into `chunks` (pgvector-backed).
+4. The indexing worker (Python by default; .NET worker is an alternative) consumes jobs, parses files, chunks content, and writes embeddings into `chunks` (pgvector-backed).
 5. The web app exposes REST APIs for:
    - Retrieval-grounded QA with citations (`/api/qa/ask`).
    - Structured brief generation (`/api/briefs/generate`).
@@ -64,7 +72,7 @@ Indexing is deliberately asynchronous and explicit:
    - Inserts a `jobs` row for `parse` and enqueues a matching Redis job.
 
 2. **Worker loop**  
-   - Python worker polls the `jobs` table for `status = 'queued'` and claims a job by marking it `running`.
+   - Worker polls the `jobs` table for `status = 'queued'` and claims a job by marking it `running`.
    - For each job:
      - `parse` → read file, normalize text, mark source `parsing`, enqueue a `chunk` job.
      - `chunk` → create overlapping chunks in `chunks`, enqueue an `embed` job.
@@ -73,7 +81,7 @@ Indexing is deliberately asynchronous and explicit:
 
 3. **Trade-offs**  
    - Polling the DB for jobs is simpler than deeply integrating with BullMQ workers on the Python side and is sufficient for a single‑worker setup.
-   - The Redis queue acts as a future‑proof contract between the TypeScript app and Python worker, while Postgres remains the source of truth for job state.
+   - The Redis queue acts as a future‑proof contract between the TypeScript app and the indexing worker, while Postgres remains the source of truth for job state.
 
 #### Retrieval and generation
 
@@ -102,7 +110,7 @@ Indexing is deliberately asynchronous and explicit:
 
 - **Logs**:
   - Pino-based logger in `@briefforge/observability` for the web app.
-  - Structured logs in the Python worker for job lifecycle events.
+  - Structured logs in the indexing worker for job lifecycle events.
 - **Metrics**:
   - Latency recorded per QA and brief generation call (`answer_runs.latency_ms`).
   - Token usage captured from OpenAI responses (input/output tokens).

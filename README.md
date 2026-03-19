@@ -10,6 +10,14 @@ It is designed as a system for agencies, solutions engineers, and creator-tool t
 - **Goal**: Provide a workspace where you can drop messy sources, ask grounded questions, and generate structured briefs that are backed by evidence.
 - **Design stance**: Outputs are *untrusted* until validated. Everything important is structured (jobs, briefs, evals, usage), not freeform blobs.
 
+### Why there’s a .NET worker in this repo
+
+BriefForge’s indexing pipeline is intentionally modeled as a long‑running background worker that consumes a stable contract (`jobs`, `sources`, `chunks`). The repo includes a **.NET 8 implementation** of that worker as an **optional alternative** to the Python worker to:
+
+- **Demonstrate practical C#/.NET proficiency** on a real, stateful workflow (DB I/O, retries, background services, structured logging).
+- **Show cross-language service boundaries** while keeping a single source of truth (Postgres) and minimizing risk to the rest of the app.
+- **Keep the demo production‑minded**: one worker runs at a time, same DB schema, same job types (`parse → chunk → embed`).
+
 For the full system diagram and component breakdown, see `docs/architecture.md`.
 
 ### Screenshots & demo
@@ -38,7 +46,7 @@ For the full system diagram and component breakdown, see `docs/architecture.md`.
    - The API writes a `sources` row and enqueues a `parse` job in `jobs`.
 
 2. **Async indexing**  
-   - The Python worker polls `jobs` and processes:
+   - The indexing worker polls `jobs` and processes (Python is the default implementation; a .NET worker is available as an alternative):
      - `parse`: read and normalize file text, mark source as `parsing`, enqueue `chunk`.
      - `chunk`: split into overlapping chunks, insert into `chunks`, enqueue `embed`.
      - `embed`: call OpenAI embeddings, update `chunks.embedding`, mark source as `indexed`.
@@ -83,6 +91,8 @@ pip install -e .
 python -m src.main
 ```
 
+Optional alternative: run the .NET indexing worker (instead of Python). See `docs/local-development.md`.
+
 ### Docs
 
 - [docs/local-development.md](docs/local-development.md) — full setup + CI-equivalent commands
@@ -100,7 +110,7 @@ BriefForge is **designed to run locally first** using Docker‑based Postgres an
   - Web app: build with `pnpm build && pnpm start` and run as a single Node.js service (e.g. Railway, Render, Fly.io, or a small VM behind Nginx).
   - Postgres: managed Postgres (e.g. Supabase, Railway, Render) with pgvector enabled.
   - Redis: managed Redis (e.g. Upstash, Railway, Render) for the `indexing-jobs` BullMQ queue.
-  - Indexing worker: one long‑running Python process (container) pointing at the same Postgres/Redis as the web app.
+  - Indexing worker: one long‑running worker process (Python by default; .NET worker is an alternative) pointing at the same Postgres/Redis as the web app.
 
 - **Environment**
   - Same env vars as local dev: `DATABASE_URL`, `REDIS_URL`, `OPENAI_API_KEY`, `AUTH_SECRET`, `NEXTAUTH_URL`, plus optional model overrides.
@@ -138,4 +148,5 @@ Full decision notes:
 - [docs/decisions/001-pgvector-over-external-vector-db.md](docs/decisions/001-pgvector-over-external-vector-db.md)
 - [docs/decisions/002-async-indexing.md](docs/decisions/002-async-indexing.md)
 - [docs/decisions/003-structured-briefs-and-citations.md](docs/decisions/003-structured-briefs-and-citations.md)
+- [docs/decisions/004-dotnet-indexing-worker-as-optional-alternative.md](docs/decisions/004-dotnet-indexing-worker-as-optional-alternative.md)
 
