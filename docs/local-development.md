@@ -69,6 +69,55 @@ The web app runs at `http://localhost:3000`.
 
 If you run on a different host/port, set `NEXTAUTH_URL` accordingly so callbacks work.
 
+### Optional: run the .NET indexing worker instead of Python
+
+The repo includes an alternative indexing worker implemented in **.NET 8**. It reads and updates the same Postgres tables (`sources`, `chunks`, `jobs`) and processes `parse → chunk → embed` jobs.
+
+From the repo root:
+
+```bash
+cd services/indexing-worker-dotnet
+
+dotnet run
+```
+
+Notes:
+- Keep only **one** worker running at a time (Python or .NET) to avoid duplicate processing.
+- The .NET worker uses the `jobs` table as the source of truth and claims jobs with `FOR UPDATE SKIP LOCKED`, so multiple .NET workers can be scaled horizontally later.
+
+Configuration (recommended):
+
+```bash
+cd services/indexing-worker-dotnet
+
+# One-time: initialize User Secrets for the worker project
+dotnet user-secrets init
+
+# Required
+dotnet user-secrets set "WorkerOptions:DatabaseUrl" "postgresql://..."
+dotnet user-secrets set "WorkerOptions:OpenAiApiKey" "..."
+
+# Optional
+dotnet user-secrets set "WorkerOptions:OpenAiEmbeddingModel" "text-embedding-3-small"
+dotnet user-secrets set "WorkerOptions:StorageRoot" "./storage"
+
+dotnet run
+```
+
+CI/CD (recommended): set environment variables using .NET's standard `__` separator:
+
+```bash
+# Required
+export WorkerOptions__DatabaseUrl="postgresql://..."
+export WorkerOptions__OpenAiApiKey="..."
+
+# Optional
+export WorkerOptions__OpenAiEmbeddingModel="text-embedding-3-small"
+export WorkerOptions__StorageRoot="./storage"
+```
+
+For compatibility with the rest of the repo, the worker will also fall back to `DATABASE_URL`, `OPENAI_API_KEY`, `OPENAI_EMBEDDING_MODEL`, and `STORAGE_ROOT` if the `WorkerOptions__*` settings aren't set.
+
 ### 5. Run checks (CI-equivalent)
 
 ```bash
